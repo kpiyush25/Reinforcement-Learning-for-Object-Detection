@@ -24,6 +24,11 @@ from resnet_policy import resnet18
 from Yolo_detect import Detector
 import pandas as pd
 
+'''
+The argparse module's support for command-line interface is built around an instance of argparse.ArgumentParser. It is a container for argument specifications.
+The .add_argument() method attaches individual argument specifications to the parser.
+The .parse_agrs() method runs the parser and places the extracted data in a argparse.Namespace object.
+'''
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                     help='discount factor (default: 0.99)')
@@ -62,7 +67,7 @@ parser.add_argument('--alpha',type=float,default=0.5,
 parser.add_argument('--epoch',type=int,default=1,
                     help='Number of epochs')
 
-                    
+
 args = parser.parse_args()
 
 df=pd.read_csv('labels.csv')
@@ -76,12 +81,14 @@ action_table=1/action_table_synth # the optimal actions are reciprocal of the fa
 ###########################################################################
 
 policy = resnet18()  # can also be resnet34, resnet50, resnet101, resnet152
+# Constructs and returns a ResNet-18 model
 if args.load_model==0:
     optimizer = optim.Adam(policy.parameters(), lr=args.lr)
 eps = np.finfo(np.float32).eps.item()
 classes = load_classes('data/coco.names')
 
 CUDA = torch.cuda.is_available()
+''' CUDA stands for Compute Unified Device Architecture. CUDA is a parallel computing platform and application programming interface that allows software to use certain types of graphics processing units for general purpose processing, an approach called general-purpose computing on GPUs. '''
 if CUDA:
    print('CUDA available, setting GPU mode')
    print('GPU Name:',torch.cuda.get_device_name(0))
@@ -91,6 +98,7 @@ if CUDA:
    print('Cached:   ', torch.cuda.memory_cached(0)/1024**3, 'GB')
    # print('Cached:   ', round(torch.cuda.memory_cached(0)/1024**3,1), 'GB')
    policy.cuda()
+   # DOUBT : What does the line "policy.cuda" mean? Does it implement the policy on the GPU and that's it?
 
 
 print('Loading the model if any')
@@ -98,16 +106,26 @@ print(args.load_model)
 if args.load_model==1:
     policy.load_state_dict(torch.load(args.weights))
     optimizer = optim.Adam(policy.parameters(), lr=args.lr)
+    # optim is a package implementing various optimization algorithms.
+    '''Adam algorithm is a replacement optimization algorithm for stochastic gradient descent for training deep learning models.'''
     optimizer.load_state_dict(torch.load(args.optimizer))
     print(args.weights)
     print(args.optimizer)
-    
+
 def save_model():
+    '''
+    This function saves the weights used in the policy and the optimizer. The torch.save method saves an object to a disk file.
+    A state_dict is an integral entity if you are interested in saving or loading models fromm PyTorch.
+    '''
     print('Saving the weights')
     torch.save(policy.state_dict(),args.weights)
     torch.save(optimizer.state_dict(),args.optimizer)
 
 def select_action(state):
+    '''
+    This function selects an action given a state.
+    Unsqueeze is a method to change the tensor dimensions, such that operations such as tensor multiplication can be possible.
+    '''
     state = torch.from_numpy(state).float().unsqueeze(0)
     if CUDA:
         state = state.cuda()
@@ -136,7 +154,7 @@ def finish_episode():
     for log_prob, reward in zip(policy.saved_log_probs1, rewards):
         policy_loss1.append(-log_prob * reward)
         #print(policy_loss1)
-    
+
     optimizer.zero_grad()
     policy_loss1 = torch.cat(policy_loss1).sum()
     #print(policy_loss1)
@@ -147,7 +165,7 @@ def finish_episode():
     optimizer.step()
     del policy.rewards[:]
     del policy.saved_log_probs1[:]
-    
+
 
 
 def main():
@@ -220,7 +238,7 @@ def main():
                 arr=ground_truth_arr[i][:4]
                 t=getResizedBB(arr,h,w,orig_img_arr.shape[0],orig_img_arr.shape[1],args.reso)
                 resized_gnd_truth_arr[i][:4]=np.array(t)
-                
+
             # rearrange predicted arrays and get class name from number
             pred = np.array(d)
             pred_arr=[]
@@ -267,6 +285,6 @@ def main():
         print('#'*50)
         reward_epoch.append(np.mean(reward_arr))
     print('Reward array:',reward_epoch)
-    
+
 if __name__ == '__main__':
     main()
