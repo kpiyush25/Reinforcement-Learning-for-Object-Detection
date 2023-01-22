@@ -5,9 +5,10 @@ start=`date +%s`
 
 # handle optional download dir
 if [ -z "$1" ]
+  # The above line tests whether an input argument to the script was defined when running the script.
   then
     # navigate to ~/data
-    echo "navigating to ~/data/ ..." 
+    echo "navigating to ~/data/ ..."
     mkdir -p ~/data
     cd ~/data/
   else
